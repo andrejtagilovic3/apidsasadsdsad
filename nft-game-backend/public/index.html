@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFT Game API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .endpoint {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        .method {
+            color: #4CAF50;
+            font-weight: bold;
+            display: inline-block;
+            width: 70px;
+        }
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 NFT Game API</h1>
+        <p>Backend API для игры с NFT и сражениями</p>
+        
+        <h2>📡 Доступные эндпоинты:</h2>
+        
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api/auth/telegram</code> - Авторизация через Telegram
+        </div>
+        
+        <div class="endpoint">
+            <span class="method">GET</span>
+            <code>/api/user/profile</code> - Получить профиль пользователя
+        </div>
+        
+        <div class="endpoint">
+            <span class="method">PUT</span>
+            <code>/api/user/profile</code> - Обновить профиль пользователя
+        </div>
+        
+        <div class="endpoint">
+            <span class="method">GET</span>
+            <code>/api/nft/collection</code> - Получить коллекцию NFT
+        </div>
+        
+        <div class="endpoint">
+            <span class="method">POST</span>
+            <code>/api/nft/collection</code> - Операции с NFT (buy, sell, setActive)
+        </div>
+        
+        <h3>🔑 Требуется авторизация:</h3>
+        <p>Для всех эндпоинтов кроме <code>/api/auth/telegram</code> требуется JWT токен в заголовке:</p>
+        <code>Authorization: Bearer &lt;token&gt;</code>
+        
+        <h3>📋 Статус API:</h3>
+        <p id="status">🔄 Проверка подключения к базе данных...</p>
+        
+        <script>
+            // Проверяем статус API
+            fetch('/api/user/profile', {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer test'
+                }
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    document.getElementById('status').innerHTML = '✅ API работает! База данных подключена.';
+                    document.getElementById('status').style.color = '#4CAF50';
+                } else {
+                    document.getElementById('status').innerHTML = '⚠️ API может работать некорректно.';
+                    document.getElementById('status').style.color = '#ff9800';
+                }
+            })
+            .catch(error => {
+                document.getElementById('status').innerHTML = '❌ Ошибка подключения к API.';
+                document.getElementById('status').style.color = '#f44336';
+            });
+        </script>
+    </div>
+</body>
+</html>
