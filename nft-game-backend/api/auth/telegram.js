@@ -5,53 +5,38 @@ import crypto from 'crypto';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-// Проверка данных от Telegram
-function verifyTelegramAuth(authData) {
-    if (!BOT_TOKEN) {
-        throw new Error('BOT_TOKEN not configured');
-    }
-    
-    const { hash, ...data } = authData;
-    
-    // Создаем строку для проверки
-    const dataCheckString = Object.keys(data)
-        .sort()
-        .map(key => `${key}=${data[key]}`)
-        .join('\n');
-    
-    // Создаем секретный ключ
-    const secretKey = crypto
-        .createHmac('sha256', 'WebAppData')
-        .update(BOT_TOKEN)
-        .digest();
-    
-    // Проверяем хеш
-    const calculatedHash = crypto
-        .createHmac('sha256', secretKey)
-        .update(dataCheckString)
-        .digest('hex');
-    
-    return calculatedHash === hash;
-}
-
 export default async function handler(req, res) {
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
     try {
-        const { initData, user } = req.body;
+        console.log('Received auth request:', req.body);
+        
+        const { initData, user, referredBy } = req.body;
 
-        // В продакшене включить проверку
-        // if (!verifyTelegramAuth(initData)) {
-        //     return res.status(401).json({ error: 'Invalid Telegram auth data' });
-        // }
+        // Проверяем что у нас есть пользователь
+        if (!user || !user.id) {
+            return res.status(400).json({ error: 'Invalid user data' });
+        }
 
         const telegramId = user.id;
         const username = user.username || '';
-        const firstName = user.first_name || '';
+        const firstName = user.first_name || 'Игрок';
         const lastName = user.last_name || '';
         const photoUrl = user.photo_url || '';
+
+        console.log('Processing user:', { telegramId, username, firstName });
 
         // Проверяем существует ли пользователь
         let dbUser = await sql`
@@ -59,6 +44,8 @@ export default async function handler(req, res) {
         `;
 
         if (dbUser.rows.length === 0) {
+            console.log('Creating new user...');
+            
             // Создаем нового пользователя
             const referralCode = Math.random().toString(36).substr(2, 8).toUpperCase();
             
@@ -71,7 +58,6 @@ export default async function handler(req, res) {
             dbUser = newUser;
             
             // Обрабатываем реферала если есть
-            const { referredBy } = req.body;
             if (referredBy) {
                 try {
                     const referrer = await sql`
@@ -94,12 +80,16 @@ export default async function handler(req, res) {
                             SET stars = stars + 1, total_stars_earned = total_stars_earned + 1
                             WHERE id = ${referrerId}
                         `;
+                        
+                        console.log('Referral bonus awarded');
                     }
                 } catch (refError) {
                     console.error('Referral error:', refError);
                 }
             }
         } else {
+            console.log('Updating existing user...');
+            
             // Обновляем данные существующего пользователя
             await sql`
                 UPDATE users 
@@ -131,6 +121,8 @@ export default async function handler(req, res) {
             { expiresIn: '30d' }
         );
 
+        console.log('Authentication successful for user:', user_data.id);
+
         res.status(200).json({
             success: true,
             token,
@@ -143,16 +135,20 @@ export default async function handler(req, res) {
                 photoUrl: user_data.photo_url,
                 stars: user_data.stars,
                 totalStarsEarned: user_data.total_stars_earned,
-                battlesCount: user_data.battles_count,
+                battlesCount: user_data.battles_count || 0,
                 referralCode: user_data.referral_code,
-                nftCount: user_data.nft_count,
-                referralsCount: user_data.referrals_count,
+                nftCount: parseInt(user_data.nft_count) || 0,
+                referralsCount: parseInt(user_data.referrals_count) || 0,
                 createdAt: user_data.created_at
             }
         });
 
     } catch (error) {
         console.error('Auth error:', error);
-        res.status(500).json({ error: 'Authentication failed', details: error.message });
+        res.status(500).json({ 
+            error: 'Authentication failed', 
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 }
