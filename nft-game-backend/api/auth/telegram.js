@@ -1,6 +1,4 @@
 import { sql } from '@vercel/postgres';
-import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
